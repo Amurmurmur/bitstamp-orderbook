@@ -18,13 +18,23 @@ import Paper from "@material-ui/core/Paper";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import List from "@material-ui/core/List";
 import ListItemText from "@material-ui/core/ListItemText";
-// import Fade from "@material-ui/core/Fade";
-// import io from 'socket.io-client';
+
+import { AutoSizer, Column, Table } from 'react-virtualized';
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
+/**
+ * Bitnami websocket client
+ */
+const client = new W3CWebSocket("wss://ws.bitstamp.net");
+const intital_order_book_subscription_payload = {
+  event: "bts:subscribe",
+  data: {
+    channel: `order_book_btcusd`
+  }
+};
 
 const styles = theme => ({
   root: {
@@ -55,10 +65,12 @@ const styles = theme => ({
   },
   loadingGridContainer: {
     minHeight: "100vh"
+  },
+  list: {
+    height: 120,
+    flex: 'wrap'
   }
 });
-
-const client = new W3CWebSocket("wss://ws.bitstamp.net");
 
 class App extends React.Component {
   state = {
@@ -70,90 +82,76 @@ class App extends React.Component {
   };
 
   initWebsocket = () => {
-    const { selectedInstrument } = this.state;
     client.onopen = () => {
       // console.log("WebSocket Client Connected");
       toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
-      client.send(
-        JSON.stringify({
-          event: "bts:subscribe",
-          data: {
-            channel: `[order_book_${selectedInstrument}]`
-          }
-        })
-      );
+      client.send(JSON.stringify(intital_order_book_subscription_payload));
     };
 
     client.onmessage = evt => {
       const response = JSON.parse(evt.data);
+      // console.log(evt);
       switch (response.event) {
-        default:
-          console.log(JSON.stringify(response));
+        case "bts:unsubscription_succeeded":
+          // console.log(response);
           break;
         case "bts:subscription_succeeded":
-          toast.success(`Successfully subscribed to ${selectedInstrument}`, {
-            autoClose: 5000
-          });
+          // console.log(response);
           break;
         case "data":
-          // console.log("DATA: " + response.data.bids[0][1]);
+          // console.log("DATA: " + JSON.stringify(response));
           this.setState({ bids: response.data.bids, asks: response.data.asks });
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
           break;
+        default:
+          console.log(JSON.stringify(response));
+          break;
       }
     };
 
+    client.onerror = evt => {
+      toast.error("Websocket error " + JSON.stringify(evt), {
+        autoClose: 5000
+      });
+    };
+
     client.onclose = () => {
-      toast.error("Websocket connection closed", { autoClose: 5000 });
-      this.initWebsocket();
+      toast.info("Websocket connection closed", { autoClose: 5000 });
+      // this.initWebsocket();
     };
   };
 
-  subscribeToChannel = () => {
-    const { selectedInstrument } = this.state;
+  subscribeToChannel = instrument => {
     client.send(
       JSON.stringify({
         event: "bts:subscribe",
         data: {
-          channel: `[order_book_${selectedInstrument}]`
+          channel: `order_book_${instrument}`
         }
       })
     );
   };
 
-  ubsubscribeFromChannel = () => {
-    const { selectedInstrument } = this.state;
+  ubsubscribeFromChannel = instrument => {
     client.send(
       JSON.stringify({
         event: "bts:unsubscribe",
         data: {
-          channel: `[order_book_${selectedInstrument}]`
+          channel: `order_book_${instrument}`
         }
       })
     );
   };
 
   componentDidMount() {
-    // this.setState({ instrumentsFetching: true });
+    this.setState({ instrumentsFetching: true });
     fetchInstruments().then(response =>
       this.setState({ instruments: response, instrumentsFetching: false })
     );
-
-    this.initWebsocket()
+    this.initWebsocket();
   }
-
-  // serializeData = (data) => {
-  //   bidsPlaceholder.innerHTML = '';
-  //   asksPlaceholder.innerHTML = '';
-  //   for (i = 0; i < data.bids.length; i++) {
-  //       bidsPlaceholder.innerHTML = bidsPlaceholder.innerHTML + data.bids[i][1] + ' BTC @ ' + data.bids[i][0] + ' USD' + '<br />';
-  //   }
-  //   for (i = 0; i < data.asks.length; i++) {
-  //       asksPlaceholder.innerHTML = asksPlaceholder.innerHTML + data.asks[i][1] + ' BTC @ ' + data.asks[i][0] + ' USD' + '<br />';
-  //   }
-  // }
 
   handleChange = event => {
     const {
@@ -161,9 +159,9 @@ class App extends React.Component {
     } = event;
     const { selectedInstrument } = this.state;
     if (value !== selectedInstrument) {
-      this.ubsubscribeFromChannel();
+      this.ubsubscribeFromChannel(selectedInstrument);
       this.setState({ selectedInstrument: value }, () => {
-        this.subscribeToChannel();
+        this.subscribeToChannel(value);
       });
     }
   };
@@ -218,20 +216,26 @@ class App extends React.Component {
             <Paper className={classes.paper}>
               <Grid container direction="row" spacing={24}>
                 <Grid item xs={6}>
-                  {bids &&
-                    bids.map((bid, index) => (
-                      <List dense key={index} className={classes.root}>
-                        <ListItemText primary={`${bid[0]}`} />
-                      </List>
-                    ))}
+                  <List dense className={classes.list}>
+                    {bids &&
+                      bids.map((bid, index) => (
+                        <ListItemText
+                          key={index}
+                          primary={`${bid[1]} BTC @ ${bid[0]} USD`}
+                        />
+                      ))}
+                  </List>
                 </Grid>
                 <Grid item xs={6}>
-                  {asks &&
-                    asks.map((ask, index) => (
-                      <List dense key={index} className={classes.root}>
-                        <ListItemText primary={`${ask[0]}`} />
-                      </List>
-                    ))}
+                  <List dense className={classes.list}>
+                    {asks &&
+                      asks.map((ask, index) => (
+                        <ListItemText
+                          key={index}
+                          primary={`${ask[1]} BTC @ ${ask[0]} USD`}
+                        />
+                      ))}
+                  </List>
                 </Grid>
               </Grid>
             </Paper>
