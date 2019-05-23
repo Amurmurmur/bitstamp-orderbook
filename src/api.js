@@ -13,7 +13,7 @@ export const fetchTrades = ({ productId, ...params }) =>
     .fetch(`${baseUrl}/${productId}/trades?${serialize(params)}`)
     .then(resp => resp.json());
 
-export const fetchInstruments = () =>
-  window.fetch(`${baseUrl}/trading-pairs-info/`).then(resp => resp.json());
+export const fetchInstruments = (...params) =>
+  window.fetch(`${baseUrl}/trading-pairs-info?${serialize(params)}`).then(resp => resp.json());
 
 export const createFeed = () => new window.WebSocket(feedUrl);

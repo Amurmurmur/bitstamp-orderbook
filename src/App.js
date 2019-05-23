@@ -28,6 +28,7 @@ import { w3cwebsocket as W3CWebSocket } from "websocket";
  */
 const client = new W3CWebSocket("wss://ws.bitstamp.net");
 const priceClient = new W3CWebSocket("wss://ws.bitstamp.net");
+
 const intital_order_book_subscription_payload = {
   event: "bts:subscribe",
   data: {
