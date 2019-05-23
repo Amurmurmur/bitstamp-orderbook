@@ -75,6 +75,10 @@ const styles = theme => ({
     overflow: "auto",
     maxHeight: 400
   },
+  tradeHistoryList: {
+    overflow: "auto",
+    maxHeight: 600
+  },
   bidText: {
     color: "red"
   },
@@ -92,6 +96,7 @@ class App extends React.Component {
     bids: null,
     asks: null,
     ticker: { price_str: "..." },
+    trades: [],
     instrumentsFetching: false
   };
 
@@ -137,7 +142,15 @@ class App extends React.Component {
       const response = JSON.parse(evt.data);
       switch (response.event) {
         case "trade":
-          this.setState({ ticker: response.data });
+          const trades = this.state.trades;
+
+          if (trades.length > 30) {
+            trades.shift();
+          }
+          this.setState({
+            ticker: response.data,
+            trades: [response.data, ...trades]
+          });
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
@@ -245,6 +258,7 @@ class App extends React.Component {
       bids,
       asks,
       ticker,
+      trades,
       selectedInstrumentCoin,
       selectedInstrumentCurrency
     } = this.state;
@@ -294,12 +308,13 @@ class App extends React.Component {
                     {bids &&
                       bids.map((bid, index) => (
                         <>
-                          <ListItem>
+                          <ListItem key={`${index}_listItem_bid`}>
                             <ListItemText
                               key={index}
                               disableTypography
                               primary={
                                 <Typography
+                                  key={`${index}${bid[1]}`}
                                   variant="body1"
                                   style={{ color: "red" }}
                                 >{`${
@@ -311,7 +326,7 @@ class App extends React.Component {
                               } ${selectedInstrumentCurrency}`}
                             />
                           </ListItem>
-                          <Divider />
+                          <Divider key={`${index}_divider_bid`} />
                         </>
                       ))}
                   </List>
@@ -322,13 +337,14 @@ class App extends React.Component {
                     {asks &&
                       asks.map((ask, index) => (
                         <>
-                          <ListItem>
+                          <ListItem key={`${index}_listItem_ask`}>
                             <ListItemText
-                              key={index}
+                              key={`${index}${ask[0]}`}
                               disableTypography
                               primary={
                                 <Typography
                                   variant="body1"
+                                  key={`${index}${ask[1]}`}
                                   style={{ color: "green" }}
                                 >{`${
                                   ask[1]
@@ -339,7 +355,7 @@ class App extends React.Component {
                               } ${selectedInstrumentCurrency}`}
                             />
                           </ListItem>
-                          <Divider />
+                          <Divider key={`${index}_divider_ask`} />
                         </>
                       ))}
                   </List>
@@ -350,7 +366,25 @@ class App extends React.Component {
           <Grid item xs={4} lg={4}>
             <Paper className={classes.paper}>
               <Typography variant="h6">Trade history</Typography>
-              <List dense className={classes.list} />
+              <List dense className={classes.tradeHistoryList}>
+                {trades &&
+                  trades.length > 0 &&
+                  trades.map((trade, index) => (
+                    <>
+                      <ListItem key={`${index}_listItem`}>
+                        <ListItemText
+                          key={`${trade.id}${trade.amount_str}${index}`}
+                          primary={`${trade.amount_str}`}
+                        />
+                        <ListItemText
+                          key={`${trade.id}${trade.price_str}${index}`}
+                          primary={`${trade.price_str}`}
+                        />
+                      </ListItem>
+                      <Divider key={`${index}_divider_trade`} />
+                    </>
+                  ))}
+              </List>
             </Paper>
           </Grid>
         </Grid>
