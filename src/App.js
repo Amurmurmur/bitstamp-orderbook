@@ -79,17 +79,24 @@ const styles = theme => ({
   },
   list: {
     overflow: "auto",
-    maxHeight: 400
+    minHeight: 250
   },
   tradeHistoryList: {
     overflow: "auto",
-    maxHeight: 600
+    minHeight: 532,
   },
   bidText: {
     color: "red"
   },
   askText: {
     color: "green"
+  },
+  footer: {
+    display: 'flex',
+    flexGrow: 1,
+    alignItems: 'center',
+    marginTop: theme.spacing.unit * 2,
+    justifyContent: 'center'
   }
 });
 
@@ -272,7 +279,7 @@ class App extends React.Component {
     return (
       <div className={classes.root}>
         <Grid alignItems={"flex-start"} direction="row" container spacing={8}>
-          <Grid item xs={4} lg={2}>
+          <Grid item xs={12} sm={4} md={4} lg={2}>
             <Paper className={classes.paper}>
               {instrumentsFetching && (
                 <CircularProgress className={classes.progress} />
@@ -306,7 +313,7 @@ class App extends React.Component {
               )}
             </Paper>
           </Grid>
-          <Grid item xs={4} lg={4}>
+          <Grid item xs={12} sm={4} md={4} lg={5}>
             <Paper className={classes.paper}>
               <Grid container direction="column" spacing={24}>
                 <Grid item xs={12}>
@@ -381,7 +388,7 @@ class App extends React.Component {
               </Grid>
             </Paper>
           </Grid>
-          <Grid item xs={4} lg={4}>
+          <Grid item xs={12} sm={4} md={4} lg={5}>
             <Paper className={classes.paper}>
               <Typography variant="h6">Trade history</Typography>
               <List dense className={classes.tradeHistoryList}>
@@ -428,6 +435,9 @@ class App extends React.Component {
             </Paper>
           </Grid>
         </Grid>
+        <div className={classes.footer}>
+          <Typography variant="body1">Made with ❤️ by Amur Anzorov</Typography>
+        </div>
         <ToastContainer />
       </div>
     );
