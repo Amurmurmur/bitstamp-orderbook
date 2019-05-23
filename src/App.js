@@ -79,11 +79,13 @@ const styles = theme => ({
   },
   list: {
     overflow: "auto",
-    minHeight: 250
+    minHeight: 250,
+    maxHeight: 250
   },
   tradeHistoryList: {
     overflow: "auto",
     minHeight: 532,
+    maxHeight: 532
   },
   bidText: {
     color: "red"
