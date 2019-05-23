@@ -149,9 +149,8 @@ class App extends React.Component {
       switch (response.event) {
         case "trade":
           const trades = this.state.trades;
-          
           if (trades.length > 30) {
-            trades.shift();
+            trades.pop();
           }
           this.setState({
             ticker: response.data,
@@ -314,27 +313,33 @@ class App extends React.Component {
                   <List dense className={classes.list}>
                     {bids &&
                       bids.map((bid, index) => (
-                        <>
-                          <ListItem key={`${index}_listItem_bid`}>
+                        <div key={`${index}`}>
+                          <ListItem>
                             <ListItemText
-                              key={index}
                               disableTypography
                               primary={
                                 <Typography
-                                  key={`${index}${bid[1]}`}
                                   variant="body1"
                                   style={{ color: "red" }}
                                 >{`${
                                   bid[1]
                                 } ${selectedInstrumentCoin}`}</Typography>
                               }
-                              secondary={`${
-                                bid[0]
-                              } ${selectedInstrumentCurrency}`}
+                            />
+                            <ListItemText
+                              disableTypography
+                              primary={
+                                <Typography
+                                  variant="body1"
+                                  style={{ color: "red" }}
+                                >{`${
+                                  bid[0]
+                                } ${selectedInstrumentCurrency}`}</Typography>
+                              }
                             />
                           </ListItem>
-                          <Divider key={`${index}_divider_bid`} />
-                        </>
+                          <Divider />
+                        </div>
                       ))}
                   </List>
                 </Grid>
@@ -343,27 +348,33 @@ class App extends React.Component {
                   <List dense className={classes.list}>
                     {asks &&
                       asks.map((ask, index) => (
-                        <>
-                          <ListItem key={`${index}_listItem_ask`}>
+                        <div key={`${index}`}>
+                          <ListItem>
                             <ListItemText
-                              key={`${index}${ask[0]}`}
                               disableTypography
                               primary={
                                 <Typography
                                   variant="body1"
-                                  key={`${index}${ask[1]}`}
                                   style={{ color: "green" }}
                                 >{`${
                                   ask[1]
                                 } ${selectedInstrumentCoin}`}</Typography>
                               }
-                              secondary={`${
-                                ask[0]
-                              } ${selectedInstrumentCurrency}`}
+                            />
+                            <ListItemText
+                              disableTypography
+                              primary={
+                                <Typography
+                                  variant="body1"
+                                  style={{ color: "green" }}
+                                >{`${
+                                  ask[0]
+                                } ${selectedInstrumentCurrency}`}</Typography>
+                              }
                             />
                           </ListItem>
-                          <Divider key={`${index}_divider_ask`} />
-                        </>
+                          <Divider />
+                        </div>
                       ))}
                   </List>
                 </Grid>
@@ -377,14 +388,12 @@ class App extends React.Component {
                 {trades &&
                   trades.length > 0 &&
                   trades.map((trade, index) => (
-                    <>
-                      <ListItem key={`${index}_listItem`}>
+                    <div key={`${index}`}>
+                      <ListItem>
                         <ListItemText
-                          key={`${trade.id}${trade.amount_str}${index}`}
                           primary={
                             <Typography
                               variant="body1"
-                              key={`${index}${trade.amount_str}`}
                               style={{
                                 color: trade.type === 0 ? "green" : "red"
                               }}
@@ -392,11 +401,9 @@ class App extends React.Component {
                           }
                         />
                         <ListItemText
-                          key={`${trade.id}${trade.price_str}${index}`}
                           primary={
                             <Typography
                               variant="body1"
-                              key={`${index}${trade.price_str}`}
                               style={{
                                 color: trade.type === 0 ? "green" : "red"
                               }}
@@ -404,11 +411,9 @@ class App extends React.Component {
                           }
                         />
                         <ListItemText
-                          key={`${trade.id}${trade.timestamp}${index}`}
                           primary={
                             <Typography
                               variant="body1"
-                              key={`${index}${trade.timestamp}`}
                               style={{
                                 color: trade.type === 0 ? "green" : "red"
                               }}
@@ -416,8 +421,8 @@ class App extends React.Component {
                           }
                         />
                       </ListItem>
-                      <Divider key={`${trade.timestamp}_divider_trade`} />
-                    </>
+                      <Divider />
+                    </div>
                   ))}
               </List>
             </Paper>
