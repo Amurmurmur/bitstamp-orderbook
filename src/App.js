@@ -17,9 +17,11 @@ import Grid from "@material-ui/core/Grid";
 import Paper from "@material-ui/core/Paper";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import List from "@material-ui/core/List";
+import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 
-import { AutoSizer, Column, Table } from 'react-virtualized';
+import Divider from "@material-ui/core/Divider";
+import Typography from "@material-ui/core/Typography";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -29,10 +31,18 @@ import { w3cwebsocket as W3CWebSocket } from "websocket";
  * Bitnami websocket client
  */
 const client = new W3CWebSocket("wss://ws.bitstamp.net");
+const priceClient = new W3CWebSocket("wss://ws.bitstamp.net");
 const intital_order_book_subscription_payload = {
   event: "bts:subscribe",
   data: {
     channel: `order_book_btcusd`
+  }
+};
+
+const intital_ticker_subscription_payload = {
+  event: "bts:subscribe",
+  data: {
+    channel: `live_trades_btcusd`
   }
 };
 
@@ -45,8 +55,6 @@ const styles = theme => ({
     margin: theme.spacing.unit,
     padding: 4,
     display: "flex",
-    // alignItems: 'center',
-    // justifyContent: 'center',
     flexGrow: 1
   },
   selectEmpty: {
@@ -67,8 +75,14 @@ const styles = theme => ({
     minHeight: "100vh"
   },
   list: {
-    height: 120,
-    flex: 'wrap'
+    overflow: "auto",
+    maxHeight: 400
+  },
+  bidText: {
+    color: "red"
+  },
+  askText: {
+    color: "green"
   }
 });
 
@@ -76,8 +90,11 @@ class App extends React.Component {
   state = {
     instruments: [],
     selectedInstrument: "btcusd",
+    selectedInstrumentCoin: "BTC",
+    selectedInstrumentCurrency: "USD",
     bids: null,
     asks: null,
+    ticker: { price_str: "..." },
     instrumentsFetching: false
   };
 
@@ -123,26 +140,88 @@ class App extends React.Component {
     };
   };
 
-  subscribeToChannel = instrument => {
-    client.send(
-      JSON.stringify({
-        event: "bts:subscribe",
-        data: {
-          channel: `order_book_${instrument}`
-        }
-      })
-    );
+  initPriceWebsocket = () => {
+    priceClient.onopen = () => {
+      // console.log("WebSocket Client Connected");
+      // toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
+      priceClient.send(JSON.stringify(intital_ticker_subscription_payload));
+    };
+
+    priceClient.onmessage = evt => {
+      const response = JSON.parse(evt.data);
+      // console.log(evt);
+      switch (response.event) {
+        case "bts:unsubscription_succeeded":
+          // console.log(response);
+          break;
+        case "bts:subscription_succeeded":
+          // console.log(response);
+          break;
+        case "trade":
+          // console.log("DATA: " + JSON.stringify(response));
+          this.setState({ ticker: response.data });
+          break;
+        case "bts:request_reconnect":
+          this.initWebsocket();
+          break;
+        default:
+          console.log(JSON.stringify(response));
+          break;
+      }
+    };
+
+    priceClient.onerror = evt => {
+      toast.error("Websocket error " + JSON.stringify(evt), {
+        autoClose: 5000
+      });
+    };
+
+    priceClient.onclose = () => {
+      toast.info("Websocket connection closed", { autoClose: 5000 });
+      // this.initWebsocket();
+    };
   };
 
-  ubsubscribeFromChannel = instrument => {
-    client.send(
-      JSON.stringify({
-        event: "bts:unsubscribe",
-        data: {
-          channel: `order_book_${instrument}`
-        }
-      })
-    );
+  subscribeToChannel = (channel, instrument) => {
+    if (channel === "order_book")
+      client.send(
+        JSON.stringify({
+          event: "bts:subscribe",
+          data: {
+            channel: `${channel}_${instrument}`
+          }
+        })
+      );
+    else if (channel === "live_trades")
+      priceClient.send(
+        JSON.stringify({
+          event: "bts:subscribe",
+          data: {
+            channel: `${channel}_${instrument}`
+          }
+        })
+      );
+  };
+
+  ubsubscribeFromChannel = (channel, instrument) => {
+    if (channel === "order_book")
+      client.send(
+        JSON.stringify({
+          event: "bts:unsubscribe",
+          data: {
+            channel: `${channel}_${instrument}`
+          }
+        })
+      );
+    else if (channel === "live_trades")
+      priceClient.send(
+        JSON.stringify({
+          event: "bts:unsubscribe",
+          data: {
+            channel: `${channel}_${instrument}`
+          }
+        })
+      );
   };
 
   componentDidMount() {
@@ -151,6 +230,7 @@ class App extends React.Component {
       this.setState({ instruments: response, instrumentsFetching: false })
     );
     this.initWebsocket();
+    this.initPriceWebsocket();
   }
 
   handleChange = event => {
@@ -159,11 +239,30 @@ class App extends React.Component {
     } = event;
     const { selectedInstrument } = this.state;
     if (value !== selectedInstrument) {
-      this.ubsubscribeFromChannel(selectedInstrument);
-      this.setState({ selectedInstrument: value }, () => {
-        this.subscribeToChannel(value);
-      });
+      this.ubsubscribeFromChannel("order_book", selectedInstrument);
+      this.ubsubscribeFromChannel("live_trades", selectedInstrument);
+      const instrument = this.getInstrument(value);
+      const selectedInstrumentCoin = instrument.name.split("/")[0];
+      const selectedInstrumentCurrency = instrument.name.split("/")[1];
+      this.setState(
+        {
+          selectedInstrument: value,
+          selectedInstrumentCoin,
+          selectedInstrumentCurrency,
+          ticker: { price_str: "..." },
+        },
+        () => {
+          this.subscribeToChannel("order_book", value);
+          this.subscribeToChannel("live_trades", value);
+        }
+      );
     }
+  };
+
+  getInstrument = url_symbol => {
+    return this.state.instruments.find(
+      (item, index) => item.url_symbol === url_symbol
+    );
   };
 
   render() {
@@ -172,13 +271,16 @@ class App extends React.Component {
       selectedInstrument,
       instrumentsFetching,
       bids,
-      asks
+      asks,
+      ticker,
+      selectedInstrumentCoin,
+      selectedInstrumentCurrency
     } = this.state;
     const { classes } = this.props;
     return (
       <div className={classes.root}>
-        <Grid alignItems={"flex-start"} direction="row" container spacing={24}>
-          <Grid item xs={6} lg={2}>
+        <Grid alignItems={"flex-start"} direction="row" container spacing={8}>
+          <Grid item xs={4} lg={2}>
             <Paper className={classes.paper}>
               {instrumentsFetching && (
                 <CircularProgress className={classes.progress} />
@@ -212,32 +314,73 @@ class App extends React.Component {
               )}
             </Paper>
           </Grid>
-          <Grid item xs={6} lg={10}>
+          <Grid item xs={4} lg={4}>
             <Paper className={classes.paper}>
-              <Grid container direction="row" spacing={24}>
-                <Grid item xs={6}>
+              <Grid container direction="column" spacing={24}>
+                <Grid item xs={12}>
                   <List dense className={classes.list}>
                     {bids &&
                       bids.map((bid, index) => (
-                        <ListItemText
-                          key={index}
-                          primary={`${bid[1]} BTC @ ${bid[0]} USD`}
-                        />
+                        <>
+                          <ListItem>
+                            <ListItemText
+                              key={index}
+                              disableTypography
+                              primary={
+                                <Typography
+                                  variant="body1"
+                                  style={{ color: "red" }}
+                                >{`${
+                                  bid[1]
+                                } ${selectedInstrumentCoin}`}</Typography>
+                              }
+                              secondary={`${
+                                bid[0]
+                              } ${selectedInstrumentCurrency}`}
+                            />
+                          </ListItem>
+                          <Divider />
+                        </>
                       ))}
                   </List>
                 </Grid>
-                <Grid item xs={6}>
+                <Typography variant="h6">{ticker.price_str}</Typography>
+                <Grid item xs={12}>
                   <List dense className={classes.list}>
                     {asks &&
                       asks.map((ask, index) => (
-                        <ListItemText
-                          key={index}
-                          primary={`${ask[1]} BTC @ ${ask[0]} USD`}
-                        />
+                        <>
+                          <ListItem>
+                            <ListItemText
+                              key={index}
+                              disableTypography
+                              primary={
+                                <Typography
+                                  variant="body1"
+                                  style={{ color: "green" }}
+                                >{`${
+                                  ask[1]
+                                } ${selectedInstrumentCoin}`}</Typography>
+                              }
+                              secondary={`${
+                                ask[0]
+                              } ${selectedInstrumentCurrency}`}
+                            />
+                          </ListItem>
+                          <Divider />
+                        </>
                       ))}
                   </List>
                 </Grid>
               </Grid>
+            </Paper>
+          </Grid>
+          <Grid item xs={4} lg={4}>
+            <Paper className={classes.paper}>
+              <Typography variant="h6">Trade history</Typography>
+              <List dense className={classes.list}>
+                
+              </List>
             </Paper>
           </Grid>
         </Grid>
