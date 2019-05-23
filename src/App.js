@@ -23,6 +23,12 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
+
+/**
+ * Dates lib
+ */
+import moment from 'moment';
+
 /**
  * Bitnami websocket client
  */
@@ -143,7 +149,7 @@ class App extends React.Component {
       switch (response.event) {
         case "trade":
           const trades = this.state.trades;
-
+          
           if (trades.length > 30) {
             trades.shift();
           }
@@ -153,7 +159,7 @@ class App extends React.Component {
           });
           break;
         case "bts:request_reconnect":
-          this.initWebsocket();
+          this.initPriceWebsocket();
           break;
         default:
           break;
@@ -375,14 +381,42 @@ class App extends React.Component {
                       <ListItem key={`${index}_listItem`}>
                         <ListItemText
                           key={`${trade.id}${trade.amount_str}${index}`}
-                          primary={`${trade.amount_str}`}
+                          primary={
+                            <Typography
+                              variant="body1"
+                              key={`${index}${trade.amount_str}`}
+                              style={{
+                                color: trade.type === 0 ? "green" : "red"
+                              }}
+                            >{`${trade.amount_str}`}</Typography>
+                          }
                         />
                         <ListItemText
                           key={`${trade.id}${trade.price_str}${index}`}
-                          primary={`${trade.price_str}`}
+                          primary={
+                            <Typography
+                              variant="body1"
+                              key={`${index}${trade.price_str}`}
+                              style={{
+                                color: trade.type === 0 ? "green" : "red"
+                              }}
+                            >{`${trade.price_str}`}</Typography>
+                          }
+                        />
+                        <ListItemText
+                          key={`${trade.id}${trade.timestamp}${index}`}
+                          primary={
+                            <Typography
+                              variant="body1"
+                              key={`${index}${trade.timestamp}`}
+                              style={{
+                                color: trade.type === 0 ? "green" : "red"
+                              }}
+                            >{`${moment.unix(trade.timestamp).format('HH:mm:ss')}`}</Typography>
+                          }
                         />
                       </ListItem>
-                      <Divider key={`${index}_divider_trade`} />
+                      <Divider key={`${trade.timestamp}_divider_trade`} />
                     </>
                   ))}
               </List>
