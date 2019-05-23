@@ -1,7 +1,4 @@
 import React from "react";
-// import logo from "./logo.svg";
-import "./App.css";
-// import { OrderBook, TradeHistory } from "react-trading-ui";
 import { fetchInstruments } from "./api";
 
 /**
@@ -10,7 +7,6 @@ import { fetchInstruments } from "./api";
 import { withStyles } from "@material-ui/core/styles";
 import MenuItem from "@material-ui/core/MenuItem";
 import Select from "@material-ui/core/Select";
-// import FormHelperText from "@material-ui/core/FormHelperText";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Grid from "@material-ui/core/Grid";
@@ -100,129 +96,104 @@ class App extends React.Component {
 
   initWebsocket = () => {
     client.onopen = () => {
-      // console.log("WebSocket Client Connected");
       toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
       client.send(JSON.stringify(intital_order_book_subscription_payload));
     };
 
     client.onmessage = evt => {
       const response = JSON.parse(evt.data);
-      // console.log(evt);
       switch (response.event) {
         case "bts:unsubscription_succeeded":
-          // console.log(response);
           break;
         case "bts:subscription_succeeded":
-          // console.log(response);
           break;
         case "data":
-          // console.log("DATA: " + JSON.stringify(response));
           this.setState({ bids: response.data.bids, asks: response.data.asks });
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
           break;
         default:
-          console.log(JSON.stringify(response));
           break;
       }
     };
 
-    client.onerror = evt => {
+    client.onerror = evt =>
       toast.error("Websocket error " + JSON.stringify(evt), {
         autoClose: 5000
       });
-    };
 
-    client.onclose = () => {
+    client.onclose = () =>
       toast.info("Websocket connection closed", { autoClose: 5000 });
-      // this.initWebsocket();
-    };
   };
 
   initPriceWebsocket = () => {
     priceClient.onopen = () => {
-      // console.log("WebSocket Client Connected");
-      // toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
       priceClient.send(JSON.stringify(intital_ticker_subscription_payload));
     };
 
     priceClient.onmessage = evt => {
       const response = JSON.parse(evt.data);
-      // console.log(evt);
       switch (response.event) {
-        case "bts:unsubscription_succeeded":
-          // console.log(response);
-          break;
-        case "bts:subscription_succeeded":
-          // console.log(response);
-          break;
         case "trade":
-          // console.log("DATA: " + JSON.stringify(response));
           this.setState({ ticker: response.data });
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
           break;
         default:
-          console.log(JSON.stringify(response));
           break;
       }
     };
 
-    priceClient.onerror = evt => {
+    priceClient.onerror = evt =>
       toast.error("Websocket error " + JSON.stringify(evt), {
         autoClose: 5000
       });
-    };
 
-    priceClient.onclose = () => {
+    priceClient.onclose = () =>
       toast.info("Websocket connection closed", { autoClose: 5000 });
-      // this.initWebsocket();
-    };
   };
 
-  subscribeToChannel = (channel, instrument) => {
-    if (channel === "order_book")
-      client.send(
-        JSON.stringify({
-          event: "bts:subscribe",
-          data: {
-            channel: `${channel}_${instrument}`
-          }
-        })
-      );
-    else if (channel === "live_trades")
-      priceClient.send(
-        JSON.stringify({
-          event: "bts:subscribe",
-          data: {
-            channel: `${channel}_${instrument}`
-          }
-        })
-      );
-  };
+  subscribeToChannel = (channel, instrument) =>
+    client.send(
+      JSON.stringify({
+        event: "bts:subscribe",
+        data: {
+          channel: `order_book_${instrument}`
+        }
+      })
+    );
 
-  ubsubscribeFromChannel = (channel, instrument) => {
-    if (channel === "order_book")
-      client.send(
-        JSON.stringify({
-          event: "bts:unsubscribe",
-          data: {
-            channel: `${channel}_${instrument}`
-          }
-        })
-      );
-    else if (channel === "live_trades")
-      priceClient.send(
-        JSON.stringify({
-          event: "bts:unsubscribe",
-          data: {
-            channel: `${channel}_${instrument}`
-          }
-        })
-      );
-  };
+  ubsubscribeFromChannel = instrument =>
+    client.send(
+      JSON.stringify({
+        event: "bts:unsubscribe",
+        data: {
+          channel: `order_book_${instrument}`
+        }
+      })
+    );
+
+  subscribeToTradesChannel = instrument =>
+    priceClient.send(
+      JSON.stringify({
+        event: "bts:subscribe",
+        data: {
+          channel: `live_trades_${instrument}`
+        }
+      })
+    );
+
+  ubsubscribeFromTradesChannel = instrument =>
+    priceClient.send(
+      JSON.stringify({
+        event: "bts:unsubscribe",
+        data: {
+          channel: `live_trades_${instrument}`
+        }
+      })
+    );
 
   componentDidMount() {
     this.setState({ instrumentsFetching: true });
@@ -239,8 +210,8 @@ class App extends React.Component {
     } = event;
     const { selectedInstrument } = this.state;
     if (value !== selectedInstrument) {
-      this.ubsubscribeFromChannel("order_book", selectedInstrument);
-      this.ubsubscribeFromChannel("live_trades", selectedInstrument);
+      this.ubsubscribeFromChannel(selectedInstrument);
+      this.ubsubscribeFromTradesChannel(selectedInstrument);
       const instrument = this.getInstrument(value);
       const selectedInstrumentCoin = instrument.name.split("/")[0];
       const selectedInstrumentCurrency = instrument.name.split("/")[1];
@@ -249,11 +220,11 @@ class App extends React.Component {
           selectedInstrument: value,
           selectedInstrumentCoin,
           selectedInstrumentCurrency,
-          ticker: { price_str: "..." },
+          ticker: { price_str: "..." }
         },
         () => {
-          this.subscribeToChannel("order_book", value);
-          this.subscribeToChannel("live_trades", value);
+          this.subscribeToChannel(value);
+          this.subscribeToTradesChannel(value);
         }
       );
     }
@@ -378,9 +349,7 @@ class App extends React.Component {
           <Grid item xs={4} lg={4}>
             <Paper className={classes.paper}>
               <Typography variant="h6">Trade history</Typography>
-              <List dense className={classes.list}>
-                
-              </List>
+              <List dense className={classes.list} />
             </Paper>
           </Grid>
         </Grid>
