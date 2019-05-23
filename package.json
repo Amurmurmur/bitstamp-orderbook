@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@material-ui/core": "^3.9.3",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "3.0.1"
+    "react-scripts": "3.0.1",
+    "react-toastify": "^5.1.1",
+    "react-trading-ui": "^0.1.5",
+    "styled-components": "^4.2.0",
+    "websocket": "^1.0.28"
   },
   "scripts": {
     "start": "react-scripts start",
