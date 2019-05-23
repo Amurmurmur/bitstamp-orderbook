@@ -438,7 +438,7 @@ class App extends React.Component {
           </Grid>
         </Grid>
         <div className={classes.footer}>
-          <Typography variant="body1">Made with ❤️ by Amur Anzorov</Typography>
+          <Typography variant="body1">Made with <span role="img" aria-label="heart">❤️</span> by Amur Anzorov</Typography>
         </div>
         <ToastContainer />
       </div>
