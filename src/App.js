@@ -234,7 +234,8 @@ class App extends React.Component {
           selectedInstrument: value,
           selectedInstrumentCoin,
           selectedInstrumentCurrency,
-          ticker: { price_str: "..." }
+          ticker: { price_str: "..." },
+          trades: []
         },
         () => {
           this.subscribeToChannel(value);
