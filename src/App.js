@@ -27,13 +27,13 @@ import { w3cwebsocket as W3CWebSocket } from "websocket";
 /**
  * Dates lib
  */
-import moment from "moment";
+import moment from 'moment';
 
 /**
  * Bitnami websocket client
  */
 const client = new W3CWebSocket("wss://ws.bitstamp.net");
-// const priceClient = new W3CWebSocket("wss://ws.bitstamp.net");
+const priceClient = new W3CWebSocket("wss://ws.bitstamp.net");
 
 const intital_order_book_subscription_payload = {
   event: "bts:subscribe",
@@ -94,11 +94,11 @@ const styles = theme => ({
     color: "green"
   },
   footer: {
-    display: "flex",
+    display: 'flex',
     flexGrow: 1,
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: theme.spacing.unit * 2,
-    justifyContent: "center"
+    justifyContent: 'center'
   }
 });
 
@@ -119,7 +119,6 @@ class App extends React.Component {
     client.onopen = () => {
       toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
       client.send(JSON.stringify(intital_order_book_subscription_payload));
-      client.send(JSON.stringify(intital_ticker_subscription_payload));
     };
 
     client.onmessage = evt => {
@@ -131,16 +130,6 @@ class App extends React.Component {
           break;
         case "data":
           this.setState({ bids: response.data.bids, asks: response.data.asks });
-          break;
-        case "trade":
-          const trades = this.state.trades;
-          if (trades.length > 30) {
-            trades.pop();
-          }
-          this.setState({
-            ticker: response.data,
-            trades: [response.data, ...trades]
-          });
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
@@ -159,40 +148,40 @@ class App extends React.Component {
       toast.info("Websocket connection closed", { autoClose: 5000 });
   };
 
-  // initPriceWebsocket = () => {
-  //   priceClient.onopen = () => {
-  //     priceClient.send(JSON.stringify(intital_ticker_subscription_payload));
-  //   };
+  initPriceWebsocket = () => {
+    priceClient.onopen = () => {
+      priceClient.send(JSON.stringify(intital_ticker_subscription_payload));
+    };
 
-  //   priceClient.onmessage = evt => {
-  //     const response = JSON.parse(evt.data);
-  //     switch (response.event) {
-  //       case "trade":
-  //         const trades = this.state.trades;
-  //         if (trades.length > 30) {
-  //           trades.pop();
-  //         }
-  //         this.setState({
-  //           ticker: response.data,
-  //           trades: [response.data, ...trades]
-  //         });
-  //         break;
-  //       case "bts:request_reconnect":
-  //         this.initPriceWebsocket();
-  //         break;
-  //       default:
-  //         break;
-  //     }
-  //   };
+    priceClient.onmessage = evt => {
+      const response = JSON.parse(evt.data);
+      switch (response.event) {
+        case "trade":
+          const trades = this.state.trades;
+          if (trades.length > 30) {
+            trades.pop();
+          }
+          this.setState({
+            ticker: response.data,
+            trades: [response.data, ...trades]
+          });
+          break;
+        case "bts:request_reconnect":
+          this.initPriceWebsocket();
+          break;
+        default:
+          break;
+      }
+    };
 
-  //   priceClient.onerror = evt =>
-  //     toast.error("Websocket error " + JSON.stringify(evt), {
-  //       autoClose: 5000
-  //     });
+    priceClient.onerror = evt =>
+      toast.error("Websocket error " + JSON.stringify(evt), {
+        autoClose: 5000
+      });
 
-  //   priceClient.onclose = () =>
-  //     toast.info("Websocket connection closed", { autoClose: 5000 });
-  // };
+    priceClient.onclose = () =>
+      toast.info("Websocket connection closed", { autoClose: 5000 });
+  };
 
   subscribeToChannel = (channel, instrument) =>
     client.send(
@@ -215,7 +204,7 @@ class App extends React.Component {
     );
 
   subscribeToTradesChannel = instrument =>
-    client.send(
+    priceClient.send(
       JSON.stringify({
         event: "bts:subscribe",
         data: {
@@ -225,7 +214,7 @@ class App extends React.Component {
     );
 
   ubsubscribeFromTradesChannel = instrument =>
-    client.send(
+    priceClient.send(
       JSON.stringify({
         event: "bts:unsubscribe",
         data: {
@@ -234,13 +223,13 @@ class App extends React.Component {
       })
     );
 
-  componentDidMount() {
+  componentWillMount() {
     this.setState({ instrumentsFetching: true });
     fetchInstruments().then(response =>
       this.setState({ instruments: response, instrumentsFetching: false })
     );
     this.initWebsocket();
-    // this.initPriceWebsocket();
+    this.initPriceWebsocket();
   }
 
   handleChange = event => {
@@ -262,13 +251,11 @@ class App extends React.Component {
           ticker: { price_str: "..." },
           trades: [],
           bids: null,
-          asks: null
-        },
-        () => {
-          this.subscribeToChannel(value);
-          this.subscribeToTradesChannel(value);
+          asks: null,
         }
       );
+      this.subscribeToChannel(value);
+      this.subscribeToTradesChannel(value);
     }
   };
 
@@ -409,9 +396,7 @@ class App extends React.Component {
             <Paper className={classes.paper}>
               <Typography variant="h6">Trade history</Typography>
               <List dense className={classes.tradeHistoryList}>
-                {trades && trades.length <= 0 && (
-                  <CircularProgress className={classes.progress} />
-                )}
+                {trades && trades.length<=0 && <CircularProgress className={classes.progress} />}
                 {trades &&
                   trades.length > 0 &&
                   trades.map((trade, index) => (
@@ -444,9 +429,7 @@ class App extends React.Component {
                               style={{
                                 color: trade.type === 0 ? "green" : "red"
                               }}
-                            >{`${moment
-                              .unix(trade.timestamp)
-                              .format("HH:mm:ss")}`}</Typography>
+                            >{`${moment.unix(trade.timestamp).format('HH:mm:ss')}`}</Typography>
                           }
                         />
                       </ListItem>
@@ -458,13 +441,7 @@ class App extends React.Component {
           </Grid>
         </Grid>
         <div className={classes.footer}>
-          <Typography variant="body1">
-            Made with{" "}
-            <span role="img" aria-label="heart">
-              ❤️
-            </span>{" "}
-            by Amur Anzorov
-          </Typography>
+          <Typography variant="body1">Made with <span role="img" aria-label="heart">❤️</span> by Amur Anzorov</Typography>
         </div>
         <ToastContainer />
       </div>
