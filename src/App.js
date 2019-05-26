@@ -1,5 +1,13 @@
 import React from "react";
-import { fetchInstruments } from "./api";
+
+/**
+ * Redux
+ */
+import { connect } from 'react-redux'
+import { compose } from 'redux'
+import { createStructuredSelector } from 'reselect'
+import { makeSelectInstruments, makeSelectInstrumentsFetching } from "./selectors/";
+import { fetchInstrumentsRequest } from "./redux/reducers/instruments/actions";
 
 /**
  * Material-ui
@@ -27,13 +35,7 @@ import { w3cwebsocket as W3CWebSocket } from "websocket";
 /**
  * Dates lib
  */
-import moment from 'moment';
-
-/**
- * Bitnami websocket client
- */
-const client = new W3CWebSocket("wss://ws.bitstamp.net");
-const priceClient = new W3CWebSocket("wss://ws.bitstamp.net");
+import moment from "moment";
 
 const intital_order_book_subscription_payload = {
   event: "bts:subscribe",
@@ -94,11 +96,11 @@ const styles = theme => ({
     color: "green"
   },
   footer: {
-    display: 'flex',
+    display: "flex",
     flexGrow: 1,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: theme.spacing.unit * 2,
-    justifyContent: 'center'
+    justifyContent: "center"
   }
 });
 
@@ -113,16 +115,20 @@ class App extends React.Component {
     ticker: { price_str: "..." },
     trades: [],
     instrumentsFetching: false,
-
+    socketClient: new W3CWebSocket("wss://ws.bitstamp.net")
   };
 
   initWebsocket = () => {
-    client.onopen = () => {
+    const { socketClient } = this.state;
+    socketClient.onopen = () => {
       toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
-      client.send(JSON.stringify(intital_order_book_subscription_payload));
+      socketClient.send(
+        JSON.stringify(intital_order_book_subscription_payload)
+      );
+      socketClient.send(JSON.stringify(intital_ticker_subscription_payload));
     };
 
-    client.onmessage = evt => {
+    socketClient.onmessage = evt => {
       const response = JSON.parse(evt.data);
       switch (response.event) {
         case "bts:unsubscription_succeeded":
@@ -130,7 +136,28 @@ class App extends React.Component {
         case "bts:subscription_succeeded":
           break;
         case "data":
-          setTimeout(this.setState({ bids: response.data.bids, asks: response.data.asks }), 1000);
+          setTimeout(
+            () =>
+              this.setState({
+                bids: response.data.bids,
+                asks: response.data.asks
+              }),
+            500
+          );
+          break;
+        case "trade":
+          const trades = this.state.trades;
+          if (trades.length > 30) {
+            trades.pop();
+          }
+          setTimeout(
+            () =>
+              this.setState({
+                ticker: response.data,
+                trades: [response.data, ...trades]
+              }),
+            100
+          );
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
@@ -140,98 +167,48 @@ class App extends React.Component {
       }
     };
 
-    client.onerror = evt =>
+    socketClient.onerror = evt =>
       toast.error("Websocket error " + JSON.stringify(evt), {
         autoClose: 5000
       });
 
-    client.onclose = () =>
+    socketClient.onclose = () =>
       toast.info("Websocket connection closed", { autoClose: 5000 });
   };
 
-  initPriceWebsocket = () => {
-    priceClient.onopen = () => {
-      priceClient.send(JSON.stringify(intital_ticker_subscription_payload));
-    };
-
-    priceClient.onmessage = evt => {
-      const response = JSON.parse(evt.data);
-      switch (response.event) {
-        case "trade":
-          const trades = this.state.trades;
-          if (trades.length > 30) {
-            trades.pop();
-          }
-          setTimeout(this.setState({
-            ticker: response.data,
-            trades: [response.data, ...trades]
-          }), 3000)
-          
-          break;
-        case "bts:request_reconnect":
-          this.initPriceWebsocket();
-          break;
-        default:
-          break;
-      }
-    };
-
-    priceClient.onerror = evt =>
-      toast.error("Websocket error " + JSON.stringify(evt), {
-        autoClose: 5000
-      });
-
-    priceClient.onclose = () =>
-      toast.info("Websocket connection closed", { autoClose: 5000 });
+  subscribeToChannel = (channel, instrument) => {
+    const { socketClient } = this.state;
+    socketClient.send(
+      JSON.stringify({
+        event: "bts:subscribe",
+        data: {
+          channel: `${channel}_${instrument}`
+        }
+      })
+    );
   };
 
-  subscribeToChannel = (instrument) =>
-    client.send(
-      JSON.stringify({
-        event: "bts:subscribe",
-        data: {
-          channel: `order_book_${instrument}`
-        }
-      })
-    );
-
-  ubsubscribeFromChannel = instrument =>
-    client.send(
+  ubsubscribeFromChannel = (channel, instrument) => {
+    const { socketClient } = this.state;
+    socketClient.send(
       JSON.stringify({
         event: "bts:unsubscribe",
         data: {
-          channel: `order_book_${instrument}`
+          channel: `${channel}_${instrument}`
         }
       })
     );
+  };
 
-  subscribeToTradesChannel = instrument =>
-    priceClient.send(
-      JSON.stringify({
-        event: "bts:subscribe",
-        data: {
-          channel: `live_trades_${instrument}`
-        }
-      })
-    );
+  componentDidMount() {
 
-  ubsubscribeFromTradesChannel = instrument =>
-    priceClient.send(
-      JSON.stringify({
-        event: "bts:unsubscribe",
-        data: {
-          channel: `live_trades_${instrument}`
-        }
-      })
-    );
-
-  componentWillMount() {
-    this.setState({ instrumentsFetching: true });
-    fetchInstruments().then(response =>
-      this.setState({ instruments: response, instrumentsFetching: false })
-    );
-    this.initWebsocket();
-    this.initPriceWebsocket();
+    const { fetchInstruments } = this.props;
+    fetchInstruments();
+    // this.setState({ instrumentsFetching: true });
+    // fetchInstruments().then(response =>
+    //   this.setState({ instruments: response, instrumentsFetching: false })
+    // );
+    // this.initWebsocket();
   }
 
   handleChange = event => {
@@ -240,24 +217,22 @@ class App extends React.Component {
     } = event;
     const { selectedInstrument } = this.state;
     if (value !== selectedInstrument) {
-      this.ubsubscribeFromChannel(selectedInstrument);
-      this.ubsubscribeFromTradesChannel(selectedInstrument);
+      this.ubsubscribeFromChannel("order_book", selectedInstrument);
+      this.ubsubscribeFromChannel("live_trades", selectedInstrument);
       const instrument = this.getInstrument(value);
       const selectedInstrumentCoin = instrument.name.split("/")[0];
       const selectedInstrumentCurrency = instrument.name.split("/")[1];
-      this.setState(
-        {
-          selectedInstrument: value,
-          selectedInstrumentCoin,
-          selectedInstrumentCurrency,
-          ticker: { price_str: "..." },
-          trades: [],
-          bids: null,
-          asks: null,
-        }
-      );
-      this.subscribeToChannel(value);
-      this.subscribeToTradesChannel(value);
+      this.setState({
+        selectedInstrument: value,
+        selectedInstrumentCoin,
+        selectedInstrumentCurrency,
+        ticker: { price_str: "..." },
+        trades: [],
+        bids: null,
+        asks: null
+      });
+      this.subscribeToChannel("order_book", value);
+      this.subscribeToChannel("live_trades", value);
     }
   };
 
@@ -269,9 +244,7 @@ class App extends React.Component {
 
   render() {
     const {
-      instruments,
       selectedInstrument,
-      instrumentsFetching,
       bids,
       asks,
       ticker,
@@ -279,7 +252,8 @@ class App extends React.Component {
       selectedInstrumentCoin,
       selectedInstrumentCurrency
     } = this.state;
-    const { classes } = this.props;
+    const { classes, instruments, instrumentsFetching } = this.props;
+    console.log(instruments)
     return (
       <div className={classes.root}>
         <Grid alignItems={"flex-start"} direction="row" container spacing={8}>
@@ -289,7 +263,7 @@ class App extends React.Component {
                 <CircularProgress className={classes.progress} />
               )}
 
-              {!instrumentsFetching && (
+              {!instrumentsFetching && instruments && (
                 <FormControl className={classes.formControl}>
                   <InputLabel htmlFor="instrument-type">
                     Instrument type
@@ -398,7 +372,9 @@ class App extends React.Component {
             <Paper className={classes.paper}>
               <Typography variant="h6">Trade history</Typography>
               <List dense className={classes.tradeHistoryList}>
-                {trades && trades.length<=0 && <CircularProgress className={classes.progress} />}
+                {trades && trades.length <= 0 && (
+                  <CircularProgress className={classes.progress} />
+                )}
                 {trades &&
                   trades.length > 0 &&
                   trades.map((trade, index) => (
@@ -431,7 +407,9 @@ class App extends React.Component {
                               style={{
                                 color: trade.type === 0 ? "green" : "red"
                               }}
-                            >{`${moment.unix(trade.timestamp).format('HH:mm:ss')}`}</Typography>
+                            >{`${moment
+                              .unix(trade.timestamp)
+                              .format("HH:mm:ss")}`}</Typography>
                           }
                         />
                       </ListItem>
@@ -443,7 +421,13 @@ class App extends React.Component {
           </Grid>
         </Grid>
         <div className={classes.footer}>
-          <Typography variant="body1">Made with <span role="img" aria-label="heart">❤️</span> by Amur Anzorov</Typography>
+          <Typography variant="body1">
+            Made with{" "}
+            <span role="img" aria-label="heart">
+              ❤️
+            </span>{" "}
+            by Amur Anzorov
+          </Typography>
         </div>
         <ToastContainer />
       </div>
@@ -451,4 +435,22 @@ class App extends React.Component {
   }
 }
 
-export default withStyles(styles)(App);
+
+const mapStateToProps = createStructuredSelector({
+  instruments: makeSelectInstruments(),
+  instrumentsFetching: makeSelectInstrumentsFetching()
+})
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    fetchInstruments: () => dispatch(fetchInstrumentsRequest())
+  }
+}
+
+const withConnect = connect(
+  mapStateToProps,
+  mapDispatchToProps,
+);
+
+
+export default compose(withStyles(styles), withConnect)(App);
