@@ -6,8 +6,9 @@ import React from "react";
 import { connect } from 'react-redux'
 import { compose } from 'redux'
 import { createStructuredSelector } from 'reselect'
-import { makeSelectInstruments, makeSelectInstrumentsFetching } from "./selectors/";
+import { makeSelectInstruments, makeSelectInstrumentsFetching, makeSelectInstrument, makeSelectTrades, makeSelectOrderBook, makeSelectTicker } from "./selectors/";
 import { fetchInstrumentsRequest } from "./redux/reducers/instruments/actions";
+import { subscribeToChannel, unsubscribeFromChannel } from "./redux/reducers/bitstampclient/actions";
 
 /**
  * Material-ui
@@ -30,26 +31,15 @@ import Typography from "@material-ui/core/Typography";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { w3cwebsocket as W3CWebSocket } from "websocket";
-
 /**
  * Dates lib
  */
 import moment from "moment";
 
-const intital_order_book_subscription_payload = {
-  event: "bts:subscribe",
-  data: {
-    channel: `order_book_btcusd`
-  }
-};
-
-const intital_ticker_subscription_payload = {
-  event: "bts:subscribe",
-  data: {
-    channel: `live_trades_btcusd`
-  }
-};
+/**
+ * Misc
+ */
+import { getInstrument } from "./utils/helpers"
 
 const styles = theme => ({
   root: {
@@ -106,109 +96,95 @@ const styles = theme => ({
 
 class App extends React.Component {
   state = {
-    instruments: [],
     selectedInstrument: "btcusd",
     selectedInstrumentCoin: "BTC",
     selectedInstrumentCurrency: "USD",
-    bids: null,
-    asks: null,
-    ticker: { price_str: "..." },
-    trades: [],
-    instrumentsFetching: false,
-    socketClient: new W3CWebSocket("wss://ws.bitstamp.net")
   };
 
-  initWebsocket = () => {
-    const { socketClient } = this.state;
-    socketClient.onopen = () => {
-      toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
-      socketClient.send(
-        JSON.stringify(intital_order_book_subscription_payload)
-      );
-      socketClient.send(JSON.stringify(intital_ticker_subscription_payload));
-    };
+  // initWebsocket = () => {
+  //   const { socketClient } = this.state;
+  //   socketClient.onopen = () => {
+  //     toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
+  //     socketClient.send(
+  //       JSON.stringify(intital_order_book_subscription_payload)
+  //     );
+  //     socketClient.send(JSON.stringify(intital_ticker_subscription_payload));
+  //   };
 
-    socketClient.onmessage = evt => {
-      const response = JSON.parse(evt.data);
-      switch (response.event) {
-        case "bts:unsubscription_succeeded":
-          break;
-        case "bts:subscription_succeeded":
-          break;
-        case "data":
-          setTimeout(
-            () =>
-              this.setState({
-                bids: response.data.bids,
-                asks: response.data.asks
-              }),
-            500
-          );
-          break;
-        case "trade":
-          const trades = this.state.trades;
-          if (trades.length > 30) {
-            trades.pop();
-          }
-          setTimeout(
-            () =>
-              this.setState({
-                ticker: response.data,
-                trades: [response.data, ...trades]
-              }),
-            100
-          );
-          break;
-        case "bts:request_reconnect":
-          this.initWebsocket();
-          break;
-        default:
-          break;
-      }
-    };
+  //   socketClient.onmessage = evt => {
+  //     const response = JSON.parse(evt.data);
+  //     switch (response.event) {
+  //       case "bts:unsubscription_succeeded":
+  //         break;
+  //       case "bts:subscription_succeeded":
+  //         break;
+  //       case "data":
+  //         setTimeout(
+  //           () =>
+  //             this.setState({
+  //               bids: response.data.bids,
+  //               asks: response.data.asks
+  //             }),
+  //           500
+  //         );
+  //         break;
+  //       case "trade":
+  //         const trades = this.state.trades;
+  //         if (trades.length > 30) {
+  //           trades.pop();
+  //         }
+  //         setTimeout(
+  //           () =>
+  //             this.setState({
+  //               ticker: response.data,
+  //               trades: [response.data, ...trades]
+  //             }),
+  //           100
+  //         );
+  //         break;
+  //       case "bts:request_reconnect":
+  //         this.initWebsocket();
+  //         break;
+  //       default:
+  //         break;
+  //     }
+  //   };
 
-    socketClient.onerror = evt =>
-      toast.error("Websocket error " + JSON.stringify(evt), {
-        autoClose: 5000
-      });
+  //   socketClient.onerror = evt =>
+  //     toast.error("Websocket error " + JSON.stringify(evt), {
+  //       autoClose: 5000
+  //     });
 
-    socketClient.onclose = () =>
-      toast.info("Websocket connection closed", { autoClose: 5000 });
-  };
+  //   socketClient.onclose = () =>
+  //     toast.info("Websocket connection closed", { autoClose: 5000 });
+  // };
 
-  subscribeToChannel = (channel, instrument) => {
-    const { socketClient } = this.state;
-    socketClient.send(
-      JSON.stringify({
-        event: "bts:subscribe",
-        data: {
-          channel: `${channel}_${instrument}`
-        }
-      })
-    );
-  };
+  // subscribeToChannel = (channel, instrument) => {
+  //   const { socketClient } = this.state;
+  //   socketClient.send(
+  //     JSON.stringify({
+  //       event: "bts:subscribe",
+  //       data: {
+  //         channel: `${channel}_${instrument}`
+  //       }
+  //     })
+  //   );
+  // };
 
-  ubsubscribeFromChannel = (channel, instrument) => {
-    const { socketClient } = this.state;
-    socketClient.send(
-      JSON.stringify({
-        event: "bts:unsubscribe",
-        data: {
-          channel: `${channel}_${instrument}`
-        }
-      })
-    );
-  };
+  // ubsubscribeFromChannel = (channel, instrument) => {
+  //   const { socketClient } = this.state;
+  //   socketClient.send(
+  //     JSON.stringify({
+  //       event: "bts:unsubscribe",
+  //       data: {
+  //         channel: `${channel}_${instrument}`
+  //       }
+  //     })
+  //   );
+  // };
 
   componentDidMount() {
-
-    const { fetchInstruments } = this.props;
-    fetchInstruments();
-    // this.setState({ instrumentsFetching: true });
-    // fetchInstruments().then(response =>
-    //   this.setState({ instruments: response, instrumentsFetching: false })
-    // );
-    // this.initWebsocket();
+    this.props.fetchInstruments();
   }
 
   handleChange = event => {
@@ -216,44 +192,30 @@ class App extends React.Component {
       target: { value }
     } = event;
     const { selectedInstrument } = this.state;
+    const { subscribe, unsubscribe, instruments } = this.props
     if (value !== selectedInstrument) {
-      this.ubsubscribeFromChannel("order_book", selectedInstrument);
-      this.ubsubscribeFromChannel("live_trades", selectedInstrument);
-      const instrument = this.getInstrument(value);
+      unsubscribe("order_book", selectedInstrument);
+      unsubscribe("live_trades", selectedInstrument);
+      const instrument = getInstrument(instruments, value);
       const selectedInstrumentCoin = instrument.name.split("/")[0];
       const selectedInstrumentCurrency = instrument.name.split("/")[1];
       this.setState({
         selectedInstrument: value,
         selectedInstrumentCoin,
         selectedInstrumentCurrency,
-        ticker: { price_str: "..." },
-        trades: [],
-        bids: null,
-        asks: null
       });
-      this.subscribeToChannel("order_book", value);
-      this.subscribeToChannel("live_trades", value);
+      subscribe("order_book", value);
+      subscribe("live_trades", value);
     }
-  };
-
-  getInstrument = url_symbol => {
-    return this.state.instruments.find(
-      (item, index) => item.url_symbol === url_symbol
-    );
   };
 
   render() {
     const {
       selectedInstrument,
-      bids,
-      asks,
-      ticker,
-      trades,
       selectedInstrumentCoin,
       selectedInstrumentCurrency
     } = this.state;
-    const { classes, instruments, instrumentsFetching } = this.props;
-    console.log(instruments)
+    const { classes, instruments, instrumentsFetching, orderBook, trades, ticker } = this.props;
     return (
       <div className={classes.root}>
         <Grid alignItems={"flex-start"} direction="row" container spacing={8}>
@@ -296,9 +258,9 @@ class App extends React.Component {
               <Grid container direction="column" spacing={24}>
                 <Grid item xs={12}>
                   <List dense className={classes.list}>
-                    {!bids && <CircularProgress className={classes.progress} />}
-                    {bids &&
-                      bids.map((bid, index) => (
+                    {!orderBook && <CircularProgress className={classes.progress} />}
+                    {orderBook &&
+                      orderBook.bids.map((bid, index) => (
                         <div key={`${index}`}>
                           <ListItem>
                             <ListItemText
@@ -332,9 +294,9 @@ class App extends React.Component {
                 <Typography variant="h6">{ticker.price_str}</Typography>
                 <Grid item xs={12}>
                   <List dense className={classes.list}>
-                    {!asks && <CircularProgress className={classes.progress} />}
-                    {asks &&
-                      asks.map((ask, index) => (
+                    {!orderBook && <CircularProgress className={classes.progress} />}
+                    {orderBook &&
+                      orderBook.asks.map((ask, index) => (
                         <div key={`${index}`}>
                           <ListItem>
                             <ListItemText
@@ -438,12 +400,18 @@ class App extends React.Component {
 
 const mapStateToProps = createStructuredSelector({
   instruments: makeSelectInstruments(),
-  instrumentsFetching: makeSelectInstrumentsFetching()
+  instrumentsFetching: makeSelectInstrumentsFetching(),
+  instrument: makeSelectInstrument(),
+  orderBook: makeSelectOrderBook(),
+  trades: makeSelectTrades(),
+  ticker: makeSelectTicker(),
 })
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    fetchInstruments: () => dispatch(fetchInstrumentsRequest())
+    fetchInstruments: () => dispatch(fetchInstrumentsRequest()),
+    subscribe: (channel, instrument) => dispatch(subscribeToChannel(channel, instrument)),
+    unsubscribe: (channel, instrument) => dispatch(unsubscribeFromChannel(channel, instrument)),
   }
 }
 

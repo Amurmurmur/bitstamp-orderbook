@@ -1,11 +1,13 @@
 import { combineReducers } from 'redux-immutable'
 
-// import orderBook from './orderbook/'
-// import trades from './trades/'
+import orderbook from './orderbook/'
+import trades from './trades/'
+import bitstamp from './bitstampclient/'
 import instruments from './instruments/'
 
 export default combineReducers({
- // trades,
- // orderBook,
+  trades,
+  orderbook,
+  bitstamp,
   instruments,
 })

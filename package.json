@@ -19,6 +19,7 @@
     "redux-immutable": "^4.0.0",
     "redux-logger": "^3.0.6",
     "redux-saga": "^1.0.2",
+    "reduxsauce": "^1.1.0",
     "reselect": "^4.0.0",
     "seamless-immutable": "^7.1.4",
     "styled-components": "^4.2.0",
