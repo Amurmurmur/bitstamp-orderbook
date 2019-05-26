@@ -112,7 +112,8 @@ class App extends React.Component {
     asks: null,
     ticker: { price_str: "..." },
     trades: [],
-    instrumentsFetching: false
+    instrumentsFetching: false,
+
   };
 
   initWebsocket = () => {
@@ -129,7 +130,7 @@ class App extends React.Component {
         case "bts:subscription_succeeded":
           break;
         case "data":
-          this.setState({ bids: response.data.bids, asks: response.data.asks });
+          setTimeout(this.setState({ bids: response.data.bids, asks: response.data.asks }), 1000);
           break;
         case "bts:request_reconnect":
           this.initWebsocket();
@@ -161,10 +162,11 @@ class App extends React.Component {
           if (trades.length > 30) {
             trades.pop();
           }
-          this.setState({
+          setTimeout(this.setState({
             ticker: response.data,
             trades: [response.data, ...trades]
-          });
+          }), 3000)
+          
           break;
         case "bts:request_reconnect":
           this.initPriceWebsocket();
@@ -183,7 +185,7 @@ class App extends React.Component {
       toast.info("Websocket connection closed", { autoClose: 5000 });
   };
 
-  subscribeToChannel = (channel, instrument) =>
+  subscribeToChannel = (instrument) =>
     client.send(
       JSON.stringify({
         event: "bts:subscribe",
