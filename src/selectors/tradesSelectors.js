@@ -1,18 +1,17 @@
-import { createSelector } from "reselect"
+import { createSelector } from "reselect";
 
-const selectTrades = () => (state, props) => state.get("trades")
+const selectTrades = () => (state, props) => state.get("trades");
 
-const makeSelectTrades = () => createSelector(
+const makeSelectTrades = () =>
+  createSelector(
     selectTrades(),
-    (substate) => substate && substate.payload
-)
+    substate => substate && substate.payload
+  );
 
-const makeSelectTicker = () => createSelector(
+const makeSelectTicker = () =>
+  createSelector(
     selectTrades(),
-    (substate) => substate && substate.ticker
-)
+    substate => substate && substate.ticker
+  );
 
-export {
-    makeSelectTrades,
-    makeSelectTicker
-}
+export { makeSelectTrades, makeSelectTicker };

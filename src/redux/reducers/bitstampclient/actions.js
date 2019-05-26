@@ -8,7 +8,7 @@ import {
 } from "./constants";
 
 export const connectBitstampRequest = () => ({
-  type: CONNECT_REQUEST,
+  type: CONNECT_REQUEST
 });
 
 export const connectBitstampSuccess = payload => ({

@@ -1,12 +1,11 @@
-import { createSelector } from 'reselect'
+import { createSelector } from "reselect";
 
-const selectOrderBook = () => (state, props) => state.get("orderbook")
+const selectOrderBook = () => (state, props) => state.get("orderbook");
 
-const makeSelectOrderBook = () => createSelector(
+const makeSelectOrderBook = () =>
+  createSelector(
     selectOrderBook(),
-    (substate) => substate && substate.payload
-)
+    substate => substate && substate.payload
+  );
 
-export {
-    makeSelectOrderBook,
-}
+export { makeSelectOrderBook };

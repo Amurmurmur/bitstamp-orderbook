@@ -3,12 +3,23 @@ import React from "react";
 /**
  * Redux
  */
-import { connect } from 'react-redux'
-import { compose } from 'redux'
-import { createStructuredSelector } from 'reselect'
-import { makeSelectInstruments, makeSelectInstrumentsFetching, makeSelectInstrument, makeSelectTrades, makeSelectOrderBook, makeSelectTicker } from "./selectors/";
+import { connect } from "react-redux";
+import { compose } from "redux";
+import { createStructuredSelector } from "reselect";
+import {
+  makeSelectInstruments,
+  makeSelectInstrumentsFetching,
+  makeSelectInstrument,
+  makeSelectTrades,
+  makeSelectOrderBook,
+  makeSelectTicker,
+  makeSelectNotifications
+} from "./selectors/";
 import { fetchInstrumentsRequest } from "./redux/reducers/instruments/actions";
-import { subscribeToChannel, unsubscribeFromChannel } from "./redux/reducers/bitstampclient/actions";
+import {
+  subscribeToChannel,
+  unsubscribeFromChannel
+} from "./redux/reducers/bitstampclient/actions";
 
 /**
  * Material-ui
@@ -28,8 +39,10 @@ import ListItemText from "@material-ui/core/ListItemText";
 import Divider from "@material-ui/core/Divider";
 import Typography from "@material-ui/core/Typography";
 
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+// import { ToastContainer } from "react-toastify";
+// import "react-toastify/dist/ReactToastify.css";
+
+import Notifications from "react-notification-system-redux";
 
 /**
  * Dates lib
@@ -39,7 +52,7 @@ import moment from "moment";
 /**
  * Misc
  */
-import { getInstrument } from "./utils/helpers"
+import { getInstrument } from "./utils/helpers";
 
 const styles = theme => ({
   root: {
@@ -98,90 +111,8 @@ class App extends React.Component {
   state = {
     selectedInstrument: "btcusd",
     selectedInstrumentCoin: "BTC",
-    selectedInstrumentCurrency: "USD",
+    selectedInstrumentCurrency: "USD"
   };
-
-  // initWebsocket = () => {
-  //   const { socketClient } = this.state;
-  //   socketClient.onopen = () => {
-  //     toast.success(`Successfully connected to Bitstamp`, { autoClose: 3000 });
-  //     socketClient.send(
-  //       JSON.stringify(intital_order_book_subscription_payload)
-  //     );
-  //     socketClient.send(JSON.stringify(intital_ticker_subscription_payload));
-  //   };
-
-  //   socketClient.onmessage = evt => {
-  //     const response = JSON.parse(evt.data);
-  //     switch (response.event) {
-  //       case "bts:unsubscription_succeeded":
-  //         break;
-  //       case "bts:subscription_succeeded":
-  //         break;
-  //       case "data":
-  //         setTimeout(
-  //           () =>
-  //             this.setState({
-  //               bids: response.data.bids,
-  //               asks: response.data.asks
-  //             }),
-  //           500
-  //         );
-  //         break;
-  //       case "trade":
-  //         const trades = this.state.trades;
-  //         if (trades.length > 30) {
-  //           trades.pop();
-  //         }
-  //         setTimeout(
-  //           () =>
-  //             this.setState({
-  //               ticker: response.data,
-  //               trades: [response.data, ...trades]
-  //             }),
-  //           100
-  //         );
-  //         break;
-  //       case "bts:request_reconnect":
-  //         this.initWebsocket();
-  //         break;
-  //       default:
-  //         break;
-  //     }
-  //   };
-
-  //   socketClient.onerror = evt =>
-  //     toast.error("Websocket error " + JSON.stringify(evt), {
-  //       autoClose: 5000
-  //     });
-
-  //   socketClient.onclose = () =>
-  //     toast.info("Websocket connection closed", { autoClose: 5000 });
-  // };
-
-  // subscribeToChannel = (channel, instrument) => {
-  //   const { socketClient } = this.state;
-  //   socketClient.send(
-  //     JSON.stringify({
-  //       event: "bts:subscribe",
-  //       data: {
-  //         channel: `${channel}_${instrument}`
-  //       }
-  //     })
-  //   );
-  // };
-
-  // ubsubscribeFromChannel = (channel, instrument) => {
-  //   const { socketClient } = this.state;
-  //   socketClient.send(
-  //     JSON.stringify({
-  //       event: "bts:unsubscribe",
-  //       data: {
-  //         channel: `${channel}_${instrument}`
-  //       }
-  //     })
-  //   );
-  // };
 
   componentDidMount() {
     this.props.fetchInstruments();
@@ -192,7 +123,7 @@ class App extends React.Component {
       target: { value }
     } = event;
     const { selectedInstrument } = this.state;
-    const { subscribe, unsubscribe, instruments } = this.props
+    const { subscribe, unsubscribe, instruments } = this.props;
     if (value !== selectedInstrument) {
       unsubscribe("order_book", selectedInstrument);
       unsubscribe("live_trades", selectedInstrument);
@@ -202,7 +133,7 @@ class App extends React.Component {
       this.setState({
         selectedInstrument: value,
         selectedInstrumentCoin,
-        selectedInstrumentCurrency,
+        selectedInstrumentCurrency
       });
       subscribe("order_book", value);
       subscribe("live_trades", value);
@@ -215,7 +146,15 @@ class App extends React.Component {
       selectedInstrumentCoin,
       selectedInstrumentCurrency
     } = this.state;
-    const { classes, instruments, instrumentsFetching, orderBook, trades, ticker } = this.props;
+    const {
+      classes,
+      instruments,
+      instrumentsFetching,
+      orderBook,
+      trades,
+      ticker,
+      notifications
+    } = this.props;
     return (
       <div className={classes.root}>
         <Grid alignItems={"flex-start"} direction="row" container spacing={8}>
@@ -258,7 +197,9 @@ class App extends React.Component {
               <Grid container direction="column" spacing={24}>
                 <Grid item xs={12}>
                   <List dense className={classes.list}>
-                    {!orderBook && <CircularProgress className={classes.progress} />}
+                    {!orderBook && (
+                      <CircularProgress className={classes.progress} />
+                    )}
                     {orderBook &&
                       orderBook.bids.map((bid, index) => (
                         <div key={`${index}`}>
@@ -294,7 +235,9 @@ class App extends React.Component {
                 <Typography variant="h6">{ticker.price_str}</Typography>
                 <Grid item xs={12}>
                   <List dense className={classes.list}>
-                    {!orderBook && <CircularProgress className={classes.progress} />}
+                    {!orderBook && (
+                      <CircularProgress className={classes.progress} />
+                    )}
                     {orderBook &&
                       orderBook.asks.map((ask, index) => (
                         <div key={`${index}`}>
@@ -334,9 +277,7 @@ class App extends React.Component {
             <Paper className={classes.paper}>
               <Typography variant="h6">Trade history</Typography>
               <List dense className={classes.tradeHistoryList}>
-                {trades && trades.length <= 0 && (
-                  <CircularProgress className={classes.progress} />
-                )}
+                {!trades && <CircularProgress className={classes.progress} />}
                 {trades &&
                   trades.length > 0 &&
                   trades.map((trade, index) => (
@@ -391,12 +332,11 @@ class App extends React.Component {
             by Amur Anzorov
           </Typography>
         </div>
-        <ToastContainer />
+        <Notifications notifications={notifications} />
       </div>
     );
   }
 }
-
 
 const mapStateToProps = createStructuredSelector({
   instruments: makeSelectInstruments(),
@@ -405,20 +345,25 @@ const mapStateToProps = createStructuredSelector({
   orderBook: makeSelectOrderBook(),
   trades: makeSelectTrades(),
   ticker: makeSelectTicker(),
-})
+  notifications: makeSelectNotifications()
+});
 
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = dispatch => {
   return {
     fetchInstruments: () => dispatch(fetchInstrumentsRequest()),
-    subscribe: (channel, instrument) => dispatch(subscribeToChannel(channel, instrument)),
-    unsubscribe: (channel, instrument) => dispatch(unsubscribeFromChannel(channel, instrument)),
-  }
-}
+    subscribe: (channel, instrument) =>
+      dispatch(subscribeToChannel(channel, instrument)),
+    unsubscribe: (channel, instrument) =>
+      dispatch(unsubscribeFromChannel(channel, instrument))
+  };
+};
 
 const withConnect = connect(
   mapStateToProps,
-  mapDispatchToProps,
+  mapDispatchToProps
 );
 
-
-export default compose(withStyles(styles), withConnect)(App);
+export default compose(
+  withStyles(styles),
+  withConnect
+)(App);

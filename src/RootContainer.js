@@ -1,20 +1,19 @@
+import React from "react";
 
-import React from 'react'
+import { Provider } from "react-redux";
+import App from "./App";
+import createStore from "./redux";
 
-import { Provider } from 'react-redux'
-import App from './App'
-import createStore from './redux'
-
-const store = createStore()
+const store = createStore();
 
 class RootContainer extends React.Component {
-  render () {
+  render() {
     return (
       <Provider store={store}>
         <App />
       </Provider>
-    )
+    );
   }
 }
 
-export default RootContainer
+export default RootContainer;

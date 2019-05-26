@@ -1,12 +1,11 @@
-import { createSelector } from 'reselect'
+import { createSelector } from "reselect";
 
-const selectBistamp = () => (state, props) => state.get("bitstamp")
+const selectBistamp = () => (state, props) => state.get("bitstamp");
 
-const makeSelectBitstampClient = () => createSelector(
+const makeSelectBitstampClient = () =>
+  createSelector(
     selectBistamp(),
-    (substate) => substate && substate.client && console.log(substate.client)
-)
+    substate => substate && substate.client
+  );
 
-export {
-    makeSelectBitstampClient
-}
+export { makeSelectBitstampClient };

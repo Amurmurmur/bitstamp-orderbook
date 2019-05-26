@@ -1,31 +1,35 @@
-import { createSelector } from 'reselect'
-import { getInstrument } from "../utils/helpers"
+import { createSelector } from "reselect";
+// import { getInstrument } from "../utils/helpers"
 
-const selectInstruments = () => (state, props) => state.get("instruments")
+const selectInstruments = () => (state, props) => state.get("instruments");
 
-const makeSelectInstruments = () => createSelector(
+const makeSelectInstruments = () =>
+  createSelector(
     selectInstruments(),
-    (substate) => substate && substate.payload
-)
+    substate => substate && substate.payload
+  );
 
-const makeSelectInstrumentsFetching = () => createSelector(
+const makeSelectInstrumentsFetching = () =>
+  createSelector(
     selectInstruments(),
-    (substate) => substate && substate.fetching
-)
+    substate => substate && substate.fetching
+  );
 
-const makeSelectSelectedInstrument = () => createSelector(
+const makeSelectSelectedInstrument = () =>
+  createSelector(
     selectInstruments(),
-    (substate) => substate && substate.selectedInstrument || ''
-)
+    substate => (substate && substate.selectedInstrument) || ""
+  );
 
-const makeSelectInstrument = () => createSelector(
+const makeSelectInstrument = () =>
+  createSelector(
     makeSelectInstruments(),
     makeSelectSelectedInstrument(),
     (instruments, selectedInstrument) => {} //getInstrument(instruments, selectedInstrument)
-)
+  );
 
 export {
-    makeSelectInstruments,
-    makeSelectInstrumentsFetching,
-    makeSelectInstrument
-}
+  makeSelectInstruments,
+  makeSelectInstrumentsFetching,
+  makeSelectInstrument
+};
