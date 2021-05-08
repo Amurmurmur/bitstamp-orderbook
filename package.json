@@ -7,7 +7,7 @@
     "clsx": "^1.0.4",
     "immutable": "^4.0.0-rc.12",
     "immutable-sorted": "^0.2.11",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.21",
     "moment": "^2.24.0",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
