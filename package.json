@@ -8,7 +8,7 @@
     "immutable": "^4.0.0-rc.12",
     "immutable-sorted": "^0.2.11",
     "lodash": "^4.17.11",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-notification-system-redux": "^2.0.0",
